@@ -15,7 +15,7 @@ import pdb
 from dataset.aug import aug_heavy
 
 
-MAX_OBJECT_NUM_PER_SAMPLE = 5
+MAX_OBJECT_NUM_PER_SAMPLE = 15
 class DAVIS_MO_Train(data.Dataset):
     # for multi object, do shuffling
 
@@ -33,18 +33,23 @@ class DAVIS_MO_Train(data.Dataset):
         self.num_objects = {}
         self.shape = {}
         self.size_480p = {}
+        self.img_files = {}
+        self.mask_files = {}
         with open(os.path.join(_imset_f), "r") as lines:
             for line in lines:
                 _video = line.rstrip('\n')
+                self.img_files[_video] = sorted(glob.glob(os.path.join(self.image_dir, _video, '*.jpg')))
+                self.mask_files[_video] = sorted(glob.glob(os.path.join(self.mask_dir, _video, '*.png')))
                 self.videos.append(_video)
                 self.num_frames[_video] = len(glob.glob(os.path.join(self.image_dir, _video, '*.jpg')))
-                _mask = np.array(Image.open(os.path.join(self.mask_dir, _video, '00000.png')).convert("P"))
+                _mask = np.array(Image.open(sorted(glob.glob(os.path.join(self.mask_dir, _video, '*.png')))[0]).convert("P"))
                 self.num_objects[_video] = np.max(_mask)
                 self.shape[_video] = np.shape(_mask)
-                _mask480 = np.array(Image.open(os.path.join(self.mask480_dir, _video, '00000.png')).convert("P"))
-                self.size_480p[_video] = np.shape(_mask480)
+                _mask_480 = np.array(Image.open(sorted(glob.glob(os.path.join(self.mask480_dir, _video, '*.png')))[0]).convert("P"))
+                self.size_480p[_video] = np.shape(_mask_480)
 
-        self.K = 11
+
+        self.K = 15
         self.single_object = single_object
         self.aug = aug_heavy()
 
@@ -85,10 +90,13 @@ class DAVIS_MO_Train(data.Dataset):
 
     def __getitem__(self, index):
         video = self.videos[index]
+        img_files = self.img_files[video]
+        mask_files = self.mask_files[video]
         info = {}
         info['name'] = video
         info['num_frames'] = self.num_frames[video]
         info['size_480p'] = self.size_480p[video]
+        info['start_frame'] = int(sorted(glob.glob(os.path.join(self.mask_dir, video, '*.png')))[0].split("/")[-1][-14:-4])
 
         N_frames = np.empty((3,)+(384,384,)+(3,), dtype=np.float32)
         N_masks = np.empty((3,)+(384,384,), dtype=np.uint8)
@@ -98,14 +106,15 @@ class DAVIS_MO_Train(data.Dataset):
         n2 = random.sample(range(n1+1,min(self.num_frames[video] - 1,n1 + 2 + self.skip)),1)[0]
         n3 = random.sample(range(n2+1,min(self.num_frames[video],n2 + 2 + self.skip)),1)[0]
         frame_list = [n1,n2,n3]
+        #print(video, ":",frame_list)
         num_object = 0
         ob_list = []
 
         for f in range(3):
-            img_file = os.path.join(self.image_dir, video, '{:05d}.jpg'.format(frame_list[f]))
+            img_file = img_files[frame_list[f]]
             tmp_frame = np.array(Image.open(img_file).convert('RGB'))
             try:
-                mask_file = os.path.join(self.mask_dir, video, '{:05d}.png'.format(frame_list[f]))  
+                mask_file = mask_files[frame_list[f]]  
                 tmp_mask = np.array(Image.open(mask_file).convert('P'), dtype=np.uint8)
             except:
                 tmp_mask = 255
@@ -134,10 +143,10 @@ if __name__ == '__main__':
     import os
     import pdb
 
-    davis_root = '/smart/haochen/cvpr/data/DAVIS'
+    davis_root = '/mnt/storage/home/ru20956/scratch/DAVIS_FOR_EVAL_2fps'
     dataset = DAVIS_MO_Train(davis_root)
-    dataset.skip = 10
-    palette = Image.open(davis_root+ '/Annotations/480p/blackswan/00000.png').getpalette()
+    dataset.skip = 2
+    palette = Image.open('/mnt/storage/home/ru20956/scratch/DAVIS/Annotations/480p/blackswan/00000.png').getpalette()
 
     output_dir = 'tmp'
     if not os.path.exists(output_dir):
@@ -149,10 +158,10 @@ if __name__ == '__main__':
         for f in range(3):
             pF = (Fs[:,f].permute(1,2,0).numpy()*255.).astype(np.uint8)
             pE = pred[f]
-            canvas = overlay_davis(pF, pE, palette)
-            img = np.concatenate([pF,canvas],axis = 0)
+            canvas = overlay_davis(pF, pE, palette,alpha=0.3)
+            img = np.concatenate([canvas],axis = 0) #img = np.concatenate([pF,canvas],axis = 0)
             img_list.append(img)
         out_img = np.concatenate(img_list,axis = 1)
         out_img = Image.fromarray(out_img)
         out_img.save(os.path.join(output_dir, str(i).zfill(5) + '.jpg'))
-        pdb.set_trace()
+        #pdb.set_trace()

@@ -1,0 +1,1 @@
+python /mnt/storage/home/ru20956sk semi-supervised --results_path ./test --davis_path /mnt/storage/home/ru20956/scratch/DAVIS_FOR_EVAL 

@@ -37,10 +37,11 @@ def get_arguments():
     parser.add_argument("-max_skip", type=int, help="max skip between training frames",default=25)
     parser.add_argument("-change_skip_step", type=int, help="change max skip per x iter",default=3000)
     parser.add_argument("-total_iter", type=int, help="total iter num",default=800000)
-    parser.add_argument("-test_iter", type=int, help="evaluate per x iters",default=10000)
+    parser.add_argument("-test_iter", type=int, help="evaluate per x iters",default=5000)
     parser.add_argument("-log_iter", type=int, help="log per x iters",default=500)
     parser.add_argument("-resume_path",type=str,default='/smart/haochen/cvpr/weights/coco_pretrained_resnet50_679999.pth')
     parser.add_argument("-save",type=str,default='../weights')
+    parser.add_argument("-name",type=str,default='default')
     parser.add_argument("-sample_rate",type=float,default=0.08)
     parser.add_argument("-backbone", type=str, help="backbone ['resnet50', 'resnet18']",default='resnet50')
 
@@ -105,6 +106,10 @@ skip_n = 0
 max_jf = 0
 
 for iter_ in range(args.total_iter):
+	if (iter_ == 0):
+		print('Evaluate at iter: ' + str(iter_))
+		g_res = evaluate(model,Testloader,['J','F'])
+		print('J&F: ' + str(g_res[0]))
 
 	if (iter_ + 1) % 1000 == 0:
 		lr = adjust_learning_rate(iter_)
@@ -173,10 +178,10 @@ for iter_ in range(args.total_iter):
 		loss_momentum = 0
 
 
-	if (iter_+1) % save_step == 0 and (iter_+1) >= 600000:
+	if (iter_+1) % save_step == 0 and (iter_+1) >= args.total_iter * 0.8:
 		if not os.path.exists(args.save):
 			os.makedirs(args.save)
-		torch.save(model.state_dict(), os.path.join(args.save,'davis_youtube_{}_{}.pth'.format(args.backbone,str(iter_))))
+		torch.save(model.state_dict(), os.path.join(args.save,'davis_youtube_{}_{}_{}_{}_{}.pth'.format(args.name,args.backbone,str(args.total_iter),str(args.batch),str(iter_ + 200000))))
 		
 		model.eval()
 		

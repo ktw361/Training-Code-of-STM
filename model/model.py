@@ -19,7 +19,11 @@ import argparse
 import copy
 import sys
 
-from resnest.torch import resnest101
+#from resnest.torch import resnest101
+# using ResNeSt-50 as an example
+#from resnest.gluon import resnest101
+
+
 from utils.helpers import *
  
 
@@ -66,8 +70,8 @@ class Encoder_M(nn.Module):
             resnet = models.resnet50(pretrained=True)
         elif backbone == 'resnet18':
             resnet = models.resnet18(pretrained=True)
-        elif backbone == 'resnest101':
-            resnet = resnest101()
+        #elif backbone == 'resnest101':
+           # resnet = resnest101()
 
         self.conv1 = resnet.conv1
         self.bn1 = resnet.bn1
@@ -103,9 +107,8 @@ class Encoder_Q(nn.Module):
             resnet = models.resnet50(pretrained=True)
         elif backbone == 'resnet18':
             resnet = models.resnet18(pretrained=True)
-        elif backbone == 'resnest101':
-            resnet = resnest101()
-
+        #elif backbone == 'resnest101':
+            #resnet = resnest101()
         self.conv1 = resnet.conv1
         self.bn1 = resnet.bn1
         self.relu = resnet.relu  # 1/2, 64

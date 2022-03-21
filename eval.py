@@ -23,7 +23,7 @@ import copy
 
 
 ### My libs
-from dataset.dataset import DAVIS_MO_Test
+from dataset.dataset2 import DAVIS_MO_Test
 from model.model import STM
 
 import warnings
@@ -51,6 +51,8 @@ def Run_video(dataset,video, num_frames, num_objects,model,Mem_every=None, Mem_n
     pred = np.zeros((num_frames,M_last.shape[3],M_last.shape[4]))
     all_Ms = []
     for t in range(1,num_frames):
+
+        print('current_frame: {},num_frames: {}, num_objects: {}'.format(t, num_frames, num_objects.numpy()[0]))
 
         # memorize
         with torch.no_grad():
@@ -112,9 +114,9 @@ def evaluate(model,Testloader,metric):
         num_objects, info = V
         seq_name = info['name']
         num_frames = info['num_frames']
-        #print('[{}]: num_frames: {}, num_objects: {}'.format(seq_name, num_frames, num_objects[0][0]))
+        #print('[{}]: num_frames: {}, num_objects: {}'.format(seq_name, num_frames, num_objects.numpy()[0]))
         
-        pred,Ms = Run_video(Testloader, seq_name, num_frames, num_objects,model,Mem_every=8, Mem_number=None)
+        pred,Ms = Run_video(Testloader, seq_name, num_frames, num_objects,model,Mem_every=8, Mem_number=None) ##  THIS IS UPDATEEEEEEEDDDD
         # all_res_masks = Es[0].cpu().numpy()[1:1+num_objects]
         all_res_masks = np.zeros((num_objects,pred.shape[0],pred.shape[1],pred.shape[2]))
         for i in range(1,num_objects+1):
@@ -181,4 +183,5 @@ if __name__ == "__main__":
 
     model.load_state_dict(torch.load(pth))
     metric = ['J','F']
+    
     print(evaluate(model,Testloader,metric))

@@ -136,9 +136,9 @@ if __name__ == '__main__':
     import pdb
 
 
-    dataset = Youtube_MO_Train('/smart/haochen/cvpr/data/YOUTUBE-VOS/train/')
-    dataset.skip = 10
-    palette = Image.open('/smart/haochen/cvpr/data/DAVIS/Annotations/480p/blackswan/00000.png').getpalette()
+    dataset = Youtube_MO_Train('/mnt/storage/home/ru20956/scratch/VOS/train')
+    dataset.skip = 30
+    palette = Image.open('/mnt/storage/home/ru20956/scratch/DAVIS/Annotations/480p/blackswan/00000.png').getpalette()
 
     output_dir = 'tmp'
     if not os.path.exists(output_dir):
@@ -151,9 +151,9 @@ if __name__ == '__main__':
             pF = (Fs[:,f].permute(1,2,0).numpy()*255.).astype(np.uint8)
             pE = pred[f]
             canvas = overlay_davis(pF, pE, palette)
-            img = np.concatenate([pF,canvas],axis = 0)
+            img = np.concatenate([canvas],axis = 0)
             img_list.append(img)
         out_img = np.concatenate(img_list,axis = 1)
         out_img = Image.fromarray(out_img)
         out_img.save(os.path.join(output_dir, str(i).zfill(5) + '.jpg'))
-        pdb.set_trace()
+        #pdb.set_trace()

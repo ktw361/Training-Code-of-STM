@@ -1,0 +1,12 @@
+__pycache__/
+**/__pycache__/
+.ipynb_checkpoints/
+
+davis_youtube_resnet50_799999_170.pth
+
+completed_annotations_stage2/
+
+result_f/
+sample4/
+tmp/
+data_mapping.csv

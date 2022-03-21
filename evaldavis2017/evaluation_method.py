@@ -6,7 +6,7 @@ import argparse
 
 import numpy as np
 import pandas as pd
-from davis2017.evaluation import DAVISEvaluation
+from davis2017.evaluation import DAVISEvaluation 
 
 default_davis_path = '../../dd/DAVIS'
 
