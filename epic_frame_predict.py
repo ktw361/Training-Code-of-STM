@@ -1,13 +1,14 @@
 import argparse
 import tqdm
 import os
+import os.path as osp
 import numpy as np
 import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
-from zmq import device
+import logging
 
 from model.model import STM
 from epic_seg import EpicSegGT, read_epic_image
@@ -70,6 +71,21 @@ class EpicFramePredictor:
         mask_full = torch.from_numpy(mask_full).float().unsqueeze_(0)
         return mask_full
 
+    def _save_annotated_mask(self, mask_th, fname):
+        """_summary_
+
+        Args:
+            mask_th (torch.Tensor): (1, 15, 480, 854)
+        """
+        _, C, H, W = mask_th.shape
+        mask = np.zeros([H, W], dtype=np.uint8)
+        for c in range(1, C):
+            nz = mask_th[0, c, :, :] == 1
+            mask[nz] = c
+        mask_E = Image.fromarray(mask)
+        mask_E.putpalette(self.palette)
+        mask_E.save(fname)
+
     def interpolate_frames(self,
                            vid: str,
                            frame_interp: int,
@@ -104,8 +120,8 @@ class EpicFramePredictor:
         else:
             raise NotImplementedError
 
-        test_path = os.path.join(save_dir, vid)
-        if not os.path.exists(test_path):
+        test_path = osp.join(save_dir, vid)
+        if not osp.exists(test_path):
             os.makedirs(test_path)
 
         F_last = self._read_frame(vid, st)  # (1, 3, 480, 854)
@@ -115,6 +131,15 @@ class EpicFramePredictor:
         F_last_rev = self._read_frame(vid, ed)
         M_last_rev = self._read_mask(vid, ed)
         E_last_rev = M_last_rev
+
+        self._save_annotated_mask(M_last, osp.join(test_path, f'frame_{st:010d}.png'))
+        self._save_annotated_mask(M_last_rev, osp.join(test_path, f'frame_{ed:010d}.png'))
+        
+        _first_path = osp.join(test_path, f'frame_{st+1:010d}.png')
+        _last_path = osp.join(test_path, f'frame_{ed-1:010d}.png')
+        if osp.exists(_first_path) and osp.exists(_last_path):
+            logging.info(f"{_first_path} and {_last_path} already exist, skipping.")
+            return
         #print("NUM FRAMES:",num_frames)
 
         pbar = tqdm.tqdm(total=num_frames)
