@@ -6,3 +6,9 @@ python eval_custome_light.py \
     --external ~/data/epic/rgb_root \
     --calc_num
 ```
+
+
+epic_frame_predict.py:
+```python
+python epic_frame_predict.py --ann_file ~/data/epic_analysis/clean_tiny_gt.txt --save_dir ~/data/epic_analysis/interpolation/
+```
