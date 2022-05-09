@@ -20,6 +20,7 @@ class EpicFramePredictor:
                  seg_root,
                  epic_rgb_root):
         self.seg_reader = EpicSegGT(seg_root, hei=1080, wid=1920)
+        self.epic_rgb_root = epic_rgb_root
         self.model = self._load_model()
         self.num_objects = len(self.seg_reader.all_cats)  # TODO(zhifan): confirm
         self.num_objects = torch.LongTensor([int(self.num_objects)])
@@ -49,7 +50,8 @@ class EpicFramePredictor:
         Returns:
             torch.Tensor with shape (1, 3, 480, 854)
         """
-        img = np.asarray(read_epic_image(vid, frame, as_pil=True).convert('RGB'))
+        img = np.asarray(read_epic_image(
+            vid, frame, root=self.epic_rgb_root, as_pil=True).convert('RGB'))
         img_h, img_w = self.image_resize
         img = cv2.resize(img, (img_w, img_h))
         Fs = torch.from_numpy(img / 255.).float().permute(2, 0, 1).unsqueeze_(0)
@@ -209,6 +211,7 @@ def predict_related_frames(annotation_file,
 
 
 def get_interpolation_overlay(video_id, frame_idx, save_dir):
+    """ Put image and mask side-by-side, save into directory """
     img = read_epic_image(video_id, frame_idx)
     mask = f"{save_dir}/{video_id}/frame_{frame_idx:010d}.png"
     mask_pil = Image.open(mask)

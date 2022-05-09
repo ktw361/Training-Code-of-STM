@@ -1,5 +1,5 @@
 import os
-from functools import partial, reduce
+from functools import partial, reduce, lru_cache
 import json
 from pathlib import Path
 import bisect
@@ -17,9 +17,9 @@ import numpy as np
 from epic_seg_classes import epic_cats
 
 
-def read_epic_image(video_id, 
-                    frame_idx, 
-                    root='/home/skynet/Zhifan/data/epic_rgb_frames/', 
+def read_epic_image(video_id,
+                    frame_idx,
+                    root='/home/skynet/Zhifan/data/epic_rgb_frames/',
                     as_pil=False):
     root = Path(root)
     frame = root/video_id[:3]/video_id/f"frame_{frame_idx:010d}.jpg"
@@ -32,7 +32,7 @@ def read_epic_image(video_id,
 class EpicSegGT(object):
 
     """
-    For simplicity and for saving memory footprint, 
+    For simplicity and for saving memory footprint,
      we assume each frame has at most one instance per category,
     Thus, we store the SEG mask as a (H, W, C) ndarray,
      where mask[:, :, c] stands for the c-th class and is 1 if it's that object
@@ -45,7 +45,7 @@ class EpicSegGT(object):
     all_cats = cat2label.keys()
 
     label2cat = {id: cat for cat, id in cat2label.items()}
-    
+
     def __init__(self,
                  seg_root,
                  hei=1080,
@@ -68,17 +68,13 @@ class EpicSegGT(object):
             for frame_data in data:
                 frame_idx = self.extract_frame_idx(frame_data)
                 self.frame_collections[video_id].add(frame_idx)
-            
-        self._cache = dict()    # 2 level map
-                                # level 1: map from video_id to dict
-                                # level 2: map from frame_idx to (H, W, C) ndarray
-    
+
     @staticmethod
     def extract_frame_idx(frame_data):
         frame_name = frame_data['documents'][0]['name']  # length-1 documents
         frame_idx = int(frame_name.split('.')[0].split('_')[-1])
         return frame_idx
-    
+
     def locate_input_pair(self, vid, frame):
         """
 
@@ -87,7 +83,7 @@ class EpicSegGT(object):
         Args:
             vid (_type_): _description_
             frame (_type_): _description_
-        
+
         Returns:
             st, ed: int
             or
@@ -98,30 +94,24 @@ class EpicSegGT(object):
         if p == 0 or p == len(l):
             return None
         return l[p-1], l[p]
-    
+
+    @lru_cache(maxsize=32)
     def read_frame(self, video_id, frame_idx):
-        """ 
+        """
         Args:
             video_id: str
             frame_idx: int
-        
+
         Returns:
             gt_mask:
                 (H, W, C) ndarray, where C = len(all_names), value = 0 or 1
-                or 
+                or
                 None if does not exists.
                 Note the background gt_mask[:, :, 0] will be filled with 1s.
         """
         if video_id not in self.path_map:
             return None
-        
-        if video_id in self._cache:
-            vid_info = self._cache[video_id]
-            if frame_idx in vid_info:
-                return vid_info[frame_idx]
-        else:
-            vid_info = dict()
-        
+
         with open(self.path_map[video_id]) as fp:
             data = json.load(fp)
 
@@ -129,24 +119,22 @@ class EpicSegGT(object):
             hei=self.image_hei, wid=self.image_wid, video_id=video_id)
         for frame_data in data:
             frame_ind = self.extract_frame_idx(frame_data)
-            if frame_ind != frame_idx:
-                continue
-            annotation = frame_data['annotation']
-            gt = Helper.walk_metas([annotation], **kwargs)[0]
-            vid_info[frame_ind] = gt
-        
-        self._cache[video_id] = vid_info
-        return self._cache[video_id][frame_idx]
-    
+            if frame_ind == frame_idx:
+                annotation = frame_data['annotation']
+                gt = Helper.walk_metas([annotation], **kwargs)[0]
+                return gt
+
+        return None
+
     def avail_videos(self):
         return list(self.path_map.keys())
-        
+
     def avail_frames(self, video_id):
         if video_id in self.path_map:
             return sorted(list(self.frame_collections[video_id]))
         else:
             return []
-    
+
     def _get_ith_frame_data(self, video_id, frame_idx):
         with open(self.path_map[video_id]) as fp:
             data = json.load(fp)
@@ -154,9 +142,9 @@ class EpicSegGT(object):
             if self.extract_frame_idx(frame_data) == frame_idx:
                 return frame_data
         raise AssertionError("frame not found.")
-    
+
     def frame_objects(self, video_id, frame_idx):
-        """ 
+        """
         Returns a Set of object of a video frame.
 
         Can be used in conjunction with self.locate_input_pair()
@@ -175,7 +163,7 @@ class EpicSegGTVisualizer(EpicSegGT):
 
     def __init__(self, *args, **kwargs):
         super(EpicSegGTVisualizer, self).__init__(*args, **kwargs)
-    
+
     @property
     def colormap(self):
         """ mapping from category name to color. """
@@ -184,12 +172,12 @@ class EpicSegGTVisualizer(EpicSegGT):
     @staticmethod
     def color_to_array(color_hex):
         return tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
-    
+
     def get_segmentation(self, video_id, frame_idx, canvas=None):
         """
 
         Args:
-            canvas: None or 
+            canvas: None or
 
         Returns:
             segment_mask: ndarray of (H, W, 3) with COLORMAP
@@ -210,7 +198,7 @@ class EpicSegGTVisualizer(EpicSegGT):
         image = cv2.resize(image, (self.image_wid, self.image_hei))
         mask = self.get_segmentation(video_id, frame_idx, canvas=image)
         return cv2.addWeighted(image, 0.5, mask, 0.5, 1.0)
-    
+
 
 all_cats = EpicSegGT.all_cats
 cat2label = EpicSegGT.cat2label
@@ -218,9 +206,9 @@ cat2label = EpicSegGT.cat2label
 
 class Helper:
 
-    """ Functions for processing annotation json. 
+    """ Functions for processing annotation json.
 
-    walk_annotataions() 
+    walk_annotataions()
         returns mask of (H, W) ndarray
 
     walk_blocks()
@@ -237,7 +225,7 @@ class Helper:
         E.g. for walking annotationEntities:
 
         walk(annotationEntities, pop_name='func_annotationEntities', **kwargs)
-        where kwargs is 
+        where kwargs is
             {
                 - 'func_annotationEntities': function
             }
@@ -251,7 +239,7 @@ class Helper:
         for d in l:
             res.append(func(d, **kwargs))
         return res
-                
+
     def _func_annotations(d, **kwargs):
         return Helper.parse_segments(d['segments'], **kwargs)
     walk_annotations = partial(walktree, func=_func_annotations)
@@ -302,7 +290,7 @@ class Helper:
     walk_metas = partial(walktree, func=_func_metas)
 
     def parse_segments(segments, **kwargs):
-        """ 
+        """
         Args:
             segments: list of 2d polygon
                 where each 2d polygon is a list-of-list
@@ -387,7 +375,7 @@ if __name__ == '__main__':
             local_name_set = get_vid_objects(jsonfile)
             name_set = name_set.union(local_name_set)
         return name_set
-            
+
     # get_all_names()
     vis = EpicSegGTVisualizer('/home/skynet/Zhifan/data/more_segs/')
     # seg = vis.get_segmentation('P12_04', 122)
