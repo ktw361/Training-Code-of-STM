@@ -136,7 +136,7 @@ class EpicFramePredictor:
 
         self._save_annotated_mask(M_last, osp.join(test_path, f'frame_{st:010d}.png'))
         self._save_annotated_mask(M_last_rev, osp.join(test_path, f'frame_{ed:010d}.png'))
-        
+
         _first_path = osp.join(test_path, f'frame_{st+1:010d}.png')
         _last_path = osp.join(test_path, f'frame_{ed-1:010d}.png')
         if osp.exists(_first_path) and osp.exists(_last_path):
@@ -229,8 +229,8 @@ def get_interpolation_overlay(video_id, frame_idx, save_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ann_file')
-    parser.add_argument('--save_dir')
+    parser.add_argument('--ann_file', default='~/data/epic_analysis/clean_tiny_gt.txt')
+    parser.add_argument('--save_dir', default='~/data/epic_analysis/interpolation')
     args = parser.parse_args()
     return args
 
