@@ -187,7 +187,9 @@ class EpicFramePredictor:
 
 
 def predict_related_frames(annotation_file,
-                           save_dir):
+                           save_dir,
+                           seg_root,
+                           epic_rgb_root):
     """
     E.g.
         P01_01_100 cup right 28802
@@ -196,15 +198,15 @@ def predict_related_frames(annotation_file,
         annotation_file (_type_): _description_
     """
     predictor = EpicFramePredictor(
-        seg_root='~/data/more_segs',
-        epic_rgb_root='~/data/epic_rgb_frames')
+        seg_root=,
+        epic_rgb_root=epic_rgb_root)
 
     with open(annotation_file) as fp:
         lines = fp.readlines()
         lines = [v.strip().replace('\t', ' ') for v in lines]
 
     for line in tqdm.tqdm(lines):
-        nid, tgt, side, frame = [v for v in line.split(' ') if len(v) > 0]
+        nid, frame = [v for v in line.split(' ') if len(v) > 0]
         vid = '_'.join(nid.split('_')[:2])
         frame = int(frame)
         predictor.interpolate_frames(vid, frame, save_dir)
@@ -230,7 +232,10 @@ def get_interpolation_overlay(video_id, frame_idx, save_dir):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--ann_file', default='~/data/epic_analysis/clean_tiny_gt.txt')
-    parser.add_argument('--save_dir', default='~/data/epic_analysis/interpolation')
+    parser.add_argument('--save_dir', default='./interpolation')
+
+    parser.add_argument('--seg_root', default='/home/skynet/Zhifan/data/more_segs')
+    parser.add_argument('--epic_rgb_root', default='/home/skynet/Zhifan/data/epic_rgb_frames/')
     args = parser.parse_args()
     return args
 
@@ -238,9 +243,6 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     predict_related_frames(args.ann_file,
-                           args.save_dir)
-
-    # predictor = EpicFramePredictor(
-    #     seg_root='~/data/more_segs',
-    #     epic_rgb_root='~/data/epic_rgb_frames')
-    # predictor.interpolate_frames('P11_105', 255, save_dir='tmp')
+                           args.save_dir,
+                           args.seg_root,
+                           args.epic_rgb_root)
