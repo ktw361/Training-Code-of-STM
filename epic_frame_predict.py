@@ -198,7 +198,7 @@ def predict_related_frames(annotation_file,
         annotation_file (_type_): _description_
     """
     predictor = EpicFramePredictor(
-        seg_root=,
+        seg_root=seg_root,
         epic_rgb_root=epic_rgb_root)
 
     with open(annotation_file) as fp:
