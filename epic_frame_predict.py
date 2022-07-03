@@ -30,7 +30,7 @@ class EpicFramePredictor:
 
     def _load_model(self,
                     backbone='resnet50',
-                    pth='../davis_weights/epic_dense_epic_0skip_sparse_resnet50_100000_32_29999.pth',
+                    pth='../davis_weights/coco_lr_fix_skip_0_1_resnet50_400000_32_359999.pth',
                     ):
         model = nn.DataParallel(STM(backbone))
         if torch.cuda.is_available():
