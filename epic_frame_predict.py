@@ -20,7 +20,7 @@ class EpicFramePredictor:
                  seg_root,
                  epic_rgb_root):
         self.seg_reader = EpicSegGT(seg_root, hei=1080, wid=1920)
-        self.epic_rgb_root = epic_rgb_root
+        self.epic_rgb_root = osp.expanduser(epic_rgb_root)
         self.model = self._load_model()
         self.num_objects = len(self.seg_reader.all_cats)  # TODO(zhifan): confirm
         self.num_objects = torch.LongTensor([int(self.num_objects)])
